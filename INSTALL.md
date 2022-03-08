@@ -1,0 +1,1 @@
+1	run 'python manage.py create_moment_attribute' to auto-generate moment attributes

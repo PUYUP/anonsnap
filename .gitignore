@@ -1,0 +1,14 @@
+.vscode
+.git
+NOTE.txt
+TODO.txt
+__pycache__/
+/__pycache__
+__pycache__
+*.pyc
+**/migrations/**
+!**/migrations
+!**/migrations/__init__.py
+/.metadata/
+**/media/**
+**/static/**
