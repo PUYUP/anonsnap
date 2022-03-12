@@ -6,7 +6,6 @@ ALLOWED_HOSTS = ALLOWED_HOSTS + PROJECT_ALLOWED_HOSTS
 
 HOST = '127.0.0.1'
 PROJECT_APPS = [
-    'eav',
     'rest_framework',
     'taggit',
     'corsheaders',

@@ -10,7 +10,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import gettext_lazy as _
 
 from taggit.managers import TaggableManager
-from eav.managers import EntityManager
 
 from apps.core.models.common import AbstractCommonField
 from ..conf import settings

@@ -18,14 +18,18 @@ class SetTags(object):
 
 class SetMomentTags(SetTags):
     def set_tags(self):
-        tags_in_title = extract_tags(self.title)
-        tags_in_summary = []
-        if self.summary:
-            tags_in_summary = extract_tags(self.summary)
+        content = ''
 
-        tags = tags_in_title + tags_in_summary
-        if tags:
-            self.tags.set(tags)
+        if self.title:
+            content += self.title
+
+        if self.summary:
+            content += self.summary
+
+        if content:
+            tags = extract_tags(content)
+            if tags:
+                self.tags.set(tags)
 
     @transaction.atomic
     def save(self, *args, **kwargs):

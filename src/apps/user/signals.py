@@ -18,7 +18,7 @@ def user_save_handler(sender, instance, created, **kwargs):
             pass
 
         # send verification
-        # used if user NOT require validate `email` or `msisdn` at register
+        # used if user NOT require validate `email` or `msisdn` at signup
         # user validate after account created
         if not instance.has_verified():
             instance.send_verification()

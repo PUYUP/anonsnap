@@ -10,10 +10,10 @@ from django.utils.translation import gettext_lazy as _
 from django.apps import apps
 from django.db.models.functions import ACos, Cos, Sin, Radians
 from django.db.models.expressions import OuterRef, Subquery
-from django.db.models import F, Value, FloatField
+from django.db.models import F, Value, FloatField, Count, Case, When
 
 from rest_framework import viewsets, status as response_status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.response import Response
 from rest_framework.pagination import LimitOffsetPagination
@@ -27,12 +27,11 @@ from .serializers import (
 from ..utils import ThrottleViewSet
 from ..permissions import IsMomentOwnerOrReject
 
-USE_KILOMETER = 6371
-USE_MILE = 3959
 PAGINATOR = LimitOffsetPagination()
 
 Location = apps.get_registered_model('snap', 'Location')
 Moment = apps.get_registered_model('snap', 'Moment')
+Comment = apps.get_registered_model('snap', 'Comment')
 
 
 class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
@@ -45,17 +44,7 @@ class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
             "summary": "<string>",
             "locations": ["<guid>"],
             "attachments": ["<guid>"],
-            "attributes": [
-                {"slug": "device_iccid", "value_text": "<string>"},
-                {"slug": "device_imei", "value_text": "<string>"},
-                {"slug": "device_imsi", "value_text": "<string>"},
-                {"slug": "device_uuid", "value_text": "<string>"}
-            ]
         }
-
-        Note:
-        When update `attributes` only used for check anonym user
-        owned their moment. Especially start with `device_<param>`
 
 
     GET
@@ -69,6 +58,7 @@ class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
     lookup_field = 'guid'
     permission_classes = (AllowAny,)
     permission_action = {
+        'create': (IsAuthenticated,),
         'partial_update': (IsMomentOwnerOrReject,),
         'destroy': (IsMomentOwnerOrReject,),
     }
@@ -91,14 +81,14 @@ class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
 
     def _querying_distance(self, queryset):
         max_radius = 5000000
-        request = self.request
-        latitude = request.query_params.get('latitude')
-        longitude = request.query_params.get('longitude')
+        latitude = self.request.query_params.get('latitude')
+        longitude = self.request.query_params.get('longitude')
 
         if latitude and longitude:
             # calculate distance based on current user location
             # by their latitude and longitude
-            calculate_distance = Value(USE_KILOMETER) * ACos(
+            # in kilometer use: 6371, in miles use: 3959
+            calculate_distance = Value(6371) * ACos(
                 Cos(Radians(float(latitude), output_field=FloatField()))
                 * Cos(Radians(F('latitude'), output_field=FloatField()))
                 * Cos(
@@ -116,8 +106,17 @@ class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
 
             queryset = queryset.annotate(
                 distance=Subquery(location.values('distance')[:1])
-            ).filter(distance__lte=max_radius)
+            ).filter(distance__lte=max_radius).order_by('distance')
 
+        return queryset.order_by('-create_at')
+
+    def _querying_tag(self, queryset):
+        # can separate with comma
+        tag = self.request.query_params.get('tag')
+        if tag:
+            tags = tag.split(',')
+            taglist = [t.strip() for t in tags]
+            queryset = queryset.filter(tags__name__in=taglist).distinct()
         return queryset
 
     def initialize_request(self, request, *args, **kwargs):
@@ -125,10 +124,18 @@ class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
         return super().initialize_request(request, *args, **kwargs)
 
     def queryset(self):
+        user = self.request.user
         return Moment.objects \
             .prefetch_related('user', 'attachments', 'attachments__locations',
                               'locations', 'tags', 'withs') \
-            .select_related('user')
+            .select_related('user') \
+            .annotate(
+                total_comment=Count('comments'),
+                is_owner=Case(
+                    When(user_id=user.id, then=Value(True)),
+                    default=Value(False)
+                )
+            )
 
     def get_instance(self, guid, is_update=False):
         try:
@@ -140,6 +147,7 @@ class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
 
     def list(self, request):
         queryset = self._querying_distance(self.queryset())
+        queryset = self._querying_tag(queryset)
         paginate_queryset = PAGINATOR.paginate_queryset(queryset, request)
         serializer = ListMomentSerializer(
             paginate_queryset,

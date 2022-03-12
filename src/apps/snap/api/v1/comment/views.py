@@ -4,20 +4,16 @@ from django.db import transaction
 from django.utils.encoding import smart_str
 from django.apps import apps
 from django.utils.translation import gettext_lazy as _
-from django.db.models import Q, OuterRef, Subquery, Exists
 from django.core.exceptions import (
     ValidationError as DjangoValidationError,
     ObjectDoesNotExist
 )
 
 from rest_framework import viewsets, status as response_status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.pagination import LimitOffsetPagination
-
-from eav.queryset import EavQuerySet
-from eav.models import Value, Attribute, Entity
 
 from ..permissions import IsMomentOwnerOrReject
 from ..utils import ThrottleViewSet
@@ -56,6 +52,7 @@ class CommentViewSet(viewsets.ViewSet, ThrottleViewSet):
     lookup_field = 'guid'
     permission_classes = (AllowAny, )
     permission_action = {
+        'create': (IsAuthenticated,),
         'partial_update': (IsMomentOwnerOrReject,),
         'destroy': (IsMomentOwnerOrReject,),
     }
@@ -115,102 +112,6 @@ class CommentViewSet(viewsets.ViewSet, ThrottleViewSet):
             return NotFound(detail=_("Comment not found"))
         except Exception as e:
             raise ValidationError(detail=smart_str(e))
-
-        """
-        d = queryset._meta.model.objects \
-            .prefetch_related('user', 'content_type', 'child') \
-            .select_related('user', 'content_type', 'child') \
-            .filter(
-                Q(eav__device_uuid='7250250292A') &
-                Q(eav__device_imei='1052-525A') &
-                Q(eav__device_iccid='I82522A') &
-                Q(eav__device_imsi='089259252A')
-            )
-        
-
-        d = queryset._meta.model.objects \
-            .prefetch_related('user', 'content_type', 'child') \
-            .select_related('user', 'content_type', 'child') \
-            .filter(Q(eav__device_uuid='7250250292A')) \
-            .filter(Q(eav__device_imei='1052-525A'))
-
-        print(d)
-        """
-
-        """
-        v = Value.objects \
-            .prefetch_related('entity_ct', 'attribute', 'value_enum', 'generic_value_ct') \
-            .select_related('entity_ct', 'attribute', 'value_enum', 'generic_value_ct') \
-            .all()
-        print(v)
-        
-
-        t = queryset.eav_values \
-            .prefetch_related('attribute', 'entity_ct') \
-            .select_related('attribute', 'entity_ct') \
-            .filter(
-                Q(attribute__slug='device_uuid', value_text='7250250292A') |
-                Q(attribute__slug='device_imei', value_text='1052-525Ax'),
-                Q(entity_id=queryset.id)
-            )
-        print(t)
-        
-
-        v = Value.objects.filter(
-            entity_id=queryset.id,
-            value_text__in=['1052-525A', '7250250292Ad'],
-            attribute__slug__in=['device_imei', 'device_uuid']
-        )
-        print(v)
-        
-
-        q1 = Q(eav__device_uuid='7250250292A')
-        q2 = Q(eav__device_imei='1052-525A')
-        q3 = Q(eav__device_imsi='089259252A')
-        q4 = Q(eav__device_iccid='I82522A')
-        r = Comment.objects.filter(
-            (q1 & q2) & (q3 & q4)
-        )
-        print(r)
-        """
-
-        attributes = [
-            {"slug": "device_imei", "value_text": "1052-525A"},
-            {"slug": "device_iccid", "value_text": "I82522A"},
-            {"slug": "device_imsi", "value_text": "089259252A"},
-            {"slug": "device_uuid", "value_text": "7250250292A"}
-        ]
-
-        """
-        valued = list()
-        for attr in attributes:
-            k = {
-                'attribute__{}'.format(k)
-                if k == 'slug' else k: v for k, v in attr.items()
-            }
-
-            vo = Value.objects \
-                .filter(entity_id=OuterRef('entity_id'), **k)
-
-        sq = Value.objects.filter(entity_id=OuterRef('entity_id')) \
-            .extra(where=["attribute_id='126' AND value_text='1052-525A'", "attribute_id='127' AND value_text='089259252A'"])
-
-        y = queryset.eav_values \
-            .prefetch_related('attribute') \
-            .select_related('attribute') \
-            .annotate(tq=Exists(sq)) \
-            .filter(tq=True)
-
-        print(y.query)
-        """
-
-        pq = queryset._meta.model.objects.filter(
-            eav_values__attribute__slug__startswith='device'
-        ).distinct().get(id=queryset.id)
-
-        w = Entity(pq)
-
-        print(w.get_values_dict())
 
         serializer = RetrieveCommentSerializer(
             instance=queryset,

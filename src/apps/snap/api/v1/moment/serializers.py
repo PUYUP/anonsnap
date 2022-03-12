@@ -10,7 +10,6 @@ from taggit.serializers import (
 
 from ..attachment.serializers import ListAttachmentSerializer
 from ..location.serializers import ListLocationSerializer
-from ..attribute.serializers import AttributeSerializer
 
 UserModel = get_user_model()
 Moment = apps.get_registered_model('snap', 'Moment')
@@ -36,6 +35,8 @@ class ListMomentSerializer(BaseMomentSerializer):
         fields=['name', 'file', ]
     )
     distance = serializers.FloatField(default=0)
+    total_comment = serializers.IntegerField(default=0)
+    is_owner = serializers.BooleanField(default=False)
 
     class Meta(BaseMomentSerializer.Meta):
         fields = [
@@ -44,11 +45,14 @@ class ListMomentSerializer(BaseMomentSerializer):
             'user',
             'title',
             'summary',
+            'create_at',
             'locations',
             'attachments',
             'tags',
-            'distance',
             'withs',
+            'distance',
+            'total_comment',
+            'is_owner',
         ]
 
     def get__links(self, instance):
@@ -67,14 +71,15 @@ class RetrieveMomentSerializer(ListMomentSerializer):
     class Meta(ListMomentSerializer.Meta):
         pass
 
+    def to_representation(self, instance):
+        request = self.context.get('request')
+        data = super().to_representation(instance)
+        data.update({'is_owner': instance.user.id == request.user.id})
+        return data
+
 
 class CreateMomentSerializer(BaseMomentSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    attributes = AttributeSerializer(
-        many=True,
-        required=False,
-        write_only=True
-    )
     locations = serializers.SlugRelatedField(
         many=True,
         slug_field='guid',
@@ -105,7 +110,6 @@ class CreateMomentSerializer(BaseMomentSerializer):
             'summary',
             'user',
             'locations',
-            'attributes',
             'attachments',
             'withs',
         ]
@@ -114,23 +118,6 @@ class CreateMomentSerializer(BaseMomentSerializer):
         if value.is_anonymous:
             return None
         return value
-
-    def to_internal_value(self, data):
-        request = self.context.get('request')
-        if request.method == 'PATCH':
-            return super().to_internal_value(data)
-
-        data = super().to_internal_value(data)
-
-        # prepare attributes
-        attributes = data.pop('attributes', None)
-        if attributes:
-            for attr in attributes:
-                obj = attr.get('slug')
-                value = attr.get('value_{}'.format(obj.datatype))
-                data.update({'eav__{}'.format(obj.slug): value})
-
-        return data
 
     def to_representation(self, instance):
         serializer = RetrieveMomentSerializer(
@@ -162,7 +149,6 @@ class UpdateMomentSerializer(CreateMomentSerializer):
             'title',
             'summary',
             'locations',
-            'attributes',
             'attachments',
             'withs',
         ]

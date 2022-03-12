@@ -1,5 +1,3 @@
-import eav
-
 from apps.core.utils import is_model_registered
 from simple_history.models import HistoricalRecords
 
@@ -67,9 +65,3 @@ if not is_model_registered('snap', 'With'):
             pass
 
     __all__.append('With')
-
-
-# register eav
-eav.register(Moment)
-eav.register(Comment)
-eav.register(Attachment)

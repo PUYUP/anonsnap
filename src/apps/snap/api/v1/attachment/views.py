@@ -5,7 +5,7 @@ from rest_framework import viewsets, status as response_status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 
 from .serializers import CreateAttachmentSerializer
 from ..utils import ThrottleViewSet
@@ -24,7 +24,7 @@ class AttachmentViewSet(viewsets.ViewSet, ThrottleViewSet):
     """
     lookup_field = 'guid'
     parser_classes = (MultiPartParser,)
-    permission_classes = (AllowAny,)
+    permission_classes = (IsAuthenticated,)
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)

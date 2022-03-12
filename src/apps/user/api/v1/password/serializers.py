@@ -24,6 +24,38 @@ class ResetWithOption(models.TextChoices):
     MSISDN = 'msisdn', _("MSISDN")
 
 
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField()
+    new_password = serializers.CharField()
+    retype_password = serializers.CharField()
+
+    def to_representation(self, instance):
+        return {'detail': _("Change password successfully")}
+
+    def validate_current_password(self, value):
+        valid = self.instance.check_password(value)
+        if not valid:
+            raise serializers.ValidationError(
+                detail=_("Wrong current password"))
+        return value
+
+    def validate_retype_password(self, value):
+        new_password = self.initial_data.get('new_password')
+        if new_password != value:
+            raise serializers.ValidationError(
+                _("The two password fields didn’t match.")
+            )
+        password_validation.validate_password(value, self.instance)
+        return value
+
+    def update(self, instance, validated_data):
+        retype_password = validated_data.get('retype_password')
+        instance.set_password(retype_password)
+        instance.save()
+
+        return validated_data
+
+
 class PasswordResetSerializer(serializers.Serializer):
     resetwith = serializers.ChoiceField(choices=ResetWithOption.choices)
     value = serializers.CharField()

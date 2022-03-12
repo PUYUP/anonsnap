@@ -6,8 +6,6 @@ from django.utils.encoding import smart_str
 
 from rest_framework import serializers
 
-from ..attribute.serializers import AttributeSerializer
-
 Comment = apps.get_registered_model('snap', 'Comment')
 CommentTree = apps.get_registered_model('snap', 'CommentTree')
 
@@ -61,11 +59,6 @@ class CreateCommentSerializer(BaseCommentSerializer):
         queryset=Comment.objects.all(),
         required=False
     )
-    attributes = AttributeSerializer(
-        many=True,
-        required=False,
-        write_only=True
-    )
 
     class Meta(BaseCommentSerializer.Meta):
         fields = [
@@ -74,7 +67,6 @@ class CreateCommentSerializer(BaseCommentSerializer):
             'object_id',
             'comment_content',
             'parent',
-            'attributes',
         ]
 
     def validate_user(self, value):
@@ -119,14 +111,6 @@ class CreateCommentSerializer(BaseCommentSerializer):
             'object_id': content_object.id
         })
 
-        # prepare attributes
-        attributes = data.pop('attributes', None)
-        if attributes:
-            for attr in attributes:
-                obj = attr.get('slug')
-                value = attr.get('value_{}'.format(obj.datatype))
-                data.update({'eav__{}'.format(obj.slug): value})
-
         return data
 
     def create(self, validated_data):
@@ -140,7 +124,4 @@ class CreateCommentSerializer(BaseCommentSerializer):
 
 class UpdateCommentSerializer(CreateCommentSerializer):
     class Meta(CreateCommentSerializer.Meta):
-        fields = [
-            'comment_content',
-            'attributes',
-        ]
+        fields = ['comment_content', ]

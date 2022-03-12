@@ -35,3 +35,18 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:8100',
     'http://localhost:4200',
 ]
+
+# Django csrf
+# ------------------------------------------------------------------------------
+# https://docs.djangoproject.com/en/2.2/ref/csrf/
+CSRF_COOKIE_DOMAIN = None
+CSRF_COOKIE_SAMESITE = None
+CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
+CSRF_COOKIE_SECURE = False
+CSRF_USE_SESSIONS = False
+CSRF_COOKIE_HTTPONLY = False
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost',
+    'http://localhost:8100',
+    'http://localhost:8101',
+]

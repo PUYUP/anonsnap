@@ -1,5 +1,8 @@
 from django.db import transaction
-from django.core.exceptions import ObjectDoesNotExist, ValidationError as DjangoValidationError
+from django.core.exceptions import (
+    ObjectDoesNotExist,
+    ValidationError as DjangoValidationError
+)
 from django.contrib.auth import get_user_model
 from django.apps import apps
 from django.utils.translation import gettext_lazy as _
@@ -16,7 +19,6 @@ from rest_framework.parsers import JSONParser, MultiPartParser
 
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from .serializers import (
     CreateUserSerializer,
@@ -26,6 +28,7 @@ from .serializers import (
     UpdateUserSerializer
 )
 from ..profile.serializers import UpdateProfileSerializer
+from ..password.serializers import ChangePasswordSerializer
 
 UserModel = get_user_model()
 Profile = apps.get_model('user', 'Profile')
@@ -106,8 +109,14 @@ class UserViewSet(BaseViewSet):
                 serializer.save()
             except DjangoValidationError as e:
                 raise ValidationError(detail=smart_str(e))
-            return Response(serializer.data, status=response_status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=response_status.HTTP_406_NOT_ACCEPTABLE)
+            return Response(
+                serializer.data,
+                status=response_status.HTTP_201_CREATED
+            )
+        return Response(
+            serializer.errors,
+            status=response_status.HTTP_406_NOT_ACCEPTABLE
+        )
 
     @transaction.atomic
     def partial_update(self, request, hexid=None):
@@ -124,8 +133,14 @@ class UserViewSet(BaseViewSet):
                 serializer.save()
             except DjangoValidationError as e:
                 raise ValidationError(detail=smart_str(e))
-            return Response(serializer.data, status=response_status.HTTP_200_OK)
-        return Response(serializer.errors, status=response_status.HTTP_406_NOT_ACCEPTABLE)
+            return Response(
+                serializer.data,
+                status=response_status.HTTP_200_OK
+            )
+        return Response(
+            serializer.errors,
+            status=response_status.HTTP_406_NOT_ACCEPTABLE
+        )
 
     def list(self, request):
         queryset = self.queryset()
@@ -141,11 +156,7 @@ class UserViewSet(BaseViewSet):
         return paginator.get_paginated_response(reversed(serializer.data))
 
     def retrieve(self, request, hexid=None):
-        try:
-            instance = self.queryset_instance(hexid=hexid)
-        except ObjectDoesNotExist:
-            raise NotFound()
-
+        instance = self.queryset_instance(hexid=hexid)
         # limit fields when other user see the user
         fields = None
         if str(request.user.hexid) != hexid:
@@ -170,6 +181,17 @@ class UserViewSet(BaseViewSet):
         parser_classes=(JSONParser, MultiPartParser,)
     )
     def update_profile(self, request, hexid=None):
+        """
+        PATCH
+        ------
+
+            {
+                "first_name": "<string>",
+                "headline": "<string>",
+                "about": "<string>",
+                "address": "<string>"
+            }
+        """
         try:
             instance = Profile.objects \
                 .select_for_update() \
@@ -189,8 +211,55 @@ class UserViewSet(BaseViewSet):
                 serializer.save()
             except DjangoValidationError as e:
                 raise ValidationError(detail=smart_str(e))
-            return Response(serializer.data, status=response_status.HTTP_200_OK)
-        return Response(serializer.errors, status=response_status.HTTP_406_NOT_ACCEPTABLE)
+            return Response(
+                serializer.data,
+                status=response_status.HTTP_200_OK
+            )
+        return Response(
+            serializer.errors,
+            status=response_status.HTTP_406_NOT_ACCEPTABLE
+        )
+
+    # change password
+    @transaction.atomic
+    @action(
+        detail=True,
+        methods=['PATCH'],
+        url_name='change-password',
+        url_path='change-password',
+        permission_classes=(IsAuthenticated,),
+    )
+    def change_password(self, request, hexid=None):
+        """
+        PATCH
+        ------
+
+            {
+                "current_password": "<string>",
+                "new_password": "<string>",
+                "retype_password": "<string>"
+            }
+        """
+        instance = self.queryset_instance(hexid=hexid)
+        serializer = ChangePasswordSerializer(
+            instance,
+            data=request.data,
+            context=self.context
+        )
+
+        if serializer.is_valid(raise_exception=True):
+            try:
+                serializer.save()
+            except DjangoValidationError as e:
+                raise ValidationError(detail=smart_str(e))
+            return Response(
+                serializer.data,
+                status=response_status.HTTP_200_OK
+            )
+        return Response(
+            serializer.errors,
+            status=response_status.HTTP_406_NOT_ACCEPTABLE
+        )
 
 
 class TokenObtainPairViewExtend(TokenObtainPairView):
@@ -207,4 +276,7 @@ class TokenObtainPairViewExtend(TokenObtainPairView):
         except ValueError as e:
             raise ValidationError({'detail': smart_str(e)})
 
-        return Response(serializer.validated_data, status=response_status.HTTP_200_OK)
+        return Response(
+            serializer.validated_data,
+            status=response_status.HTTP_200_OK
+        )

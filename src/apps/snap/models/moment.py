@@ -3,7 +3,6 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.utils.translation import gettext_lazy as _
 
 from taggit.managers import TaggableManager
-from eav.managers import EntityManager
 
 from apps.core.models.common import AbstractCommonField
 from ..conf import settings
@@ -11,7 +10,12 @@ from .utils import SetMomentTags
 
 
 class AbstractMoment(SetMomentTags, AbstractCommonField):
-    title = models.CharField(db_index=True, max_length=255)
+    title = models.CharField(
+        db_index=True,
+        max_length=255,
+        null=True,
+        blank=True
+    )
     summary = models.TextField(null=True, blank=True)
 
     # non-registered user can make moment as anonym
@@ -40,14 +44,12 @@ class AbstractMoment(SetMomentTags, AbstractCommonField):
         related_name='moment_withs'
     )
 
-    objects = EntityManager()
-
     class Meta:
         abstract = True
         ordering = ['-create_at']
 
     def __str__(self) -> str:
-        return self.title
+        return self.title or self.summary
 
 
 class AbstractWith(AbstractCommonField):

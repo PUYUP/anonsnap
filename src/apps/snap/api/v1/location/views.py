@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import viewsets, status as response_status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 
 from .serializers import CreateLocationSerializer
 from ..utils import ThrottleViewSet
@@ -25,7 +25,7 @@ class LocationViewSet(viewsets.ViewSet, ThrottleViewSet):
 
     """
     lookup_field = 'guid'
-    permission_classes = (AllowAny,)
+    permission_classes = (IsAuthenticated,)
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)

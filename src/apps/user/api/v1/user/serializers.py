@@ -130,7 +130,7 @@ class CreateUserSerializer(BaseUserSerializer):
                 })
 
             # warning! brute force maybe can acquired user verification
-            # case; user A verify their email but not used for register
+            # case; user A verify their email but not used for signup
             # then user B maybe can used email from user A
             # so we need add some verification data like token
             verified = self.Meta.model.objects.verification_check(**verify)

@@ -15,9 +15,12 @@ class UserChangeFormExtend(UserChangeForm):
         # Make user email filled
         if email:
             # Validate each user has different email
-            if UserModel.objects.filter(email=email, is_email_verified=True).exclude(id=self.instance.id).exists():
+            if UserModel.objects.filter(email=email, is_email_verified=True) \
+                    .exclude(id=self.instance.id).exists():
                 raise forms.ValidationError(
-                    _("Email {email} already registered.".format(email=email)))
+                    _("Email {email} has used by another user.".format(
+                        email=email))
+                )
         return email
 
 
@@ -31,7 +34,10 @@ class UserCreationFormExtend(UserCreationForm):
         # Make user email filled
         if email:
             # Validate each user has different email
-            if UserModel.objects.filter(email=email, is_email_verified=True).exclude(username=username).exists():
+            if UserModel.objects.filter(email=email, is_email_verified=True) \
+                    .exclude(username=username).exists():
                 raise forms.ValidationError(
-                    _("Email {email} already registered.".format(email=email)))
+                    _("Email {email} has used by another user.".format(
+                        email=email))
+                )
         return email

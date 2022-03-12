@@ -22,10 +22,12 @@ selesai
 8	tags moment
 9	tags attachment
 10	withs moment
+11	moment comment
+12	tags berbasis lokasi
+13	filter moment dengan tags
 
 selanjutnya
-1	moment comment
-2	attachment comment
+1	attachment comment
 
 flow
 1	harus mengaktifkan lokasi (gps) ponsel / browser
@@ -37,3 +39,5 @@ problem sebagai anonim
 - sulit selalu menggunakan attribute setiap edit / delete
 - solusinya gunakan data device sebagai user account (nama device, imei, iccid, imsi, uuid)
 - gunakan imei sebagai email/username dan password (jika user ingin hapus / edit moment nya)
+
+harus dikalkulasi di level Moment setelah itu subquerykan kedalam tag
