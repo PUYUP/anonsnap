@@ -1,7 +1,9 @@
 .vscode
 .git
-NOTE.txt
-TODO.txt
+NOTE.md
+TODO.md
+DEMO.md
+INSTALL.md
 __pycache__/
 /__pycache__
 __pycache__
