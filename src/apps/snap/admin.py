@@ -8,6 +8,12 @@ class AttachmentInline(ct_admin.GenericStackedInline):
     model = Attachment
     ct_field = 'content_type'
     ct_fk_field = 'object_id'
+    fields = ['id', 'file', 'name', 'identifier', 'caption', ]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.prefetch_related('user', 'content_type') \
+            .select_related('user', 'content_type')
 
 
 class LocationInline(ct_admin.GenericStackedInline):
@@ -16,6 +22,13 @@ class LocationInline(ct_admin.GenericStackedInline):
     ct_fk_field = 'object_id'
     min_num = 1
     max_num = 1
+    fields = ['id', 'name', 'formatted_address', 'postal_code',
+              'latitude', 'longitude', ]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.prefetch_related('user', 'content_type') \
+            .select_related('user', 'content_type')
 
 
 class WithInline(admin.StackedInline):

@@ -13,8 +13,8 @@ urlpatterns = [
     path('', include(router.urls)),
     path('token/', TokenObtainPairViewExtend.as_view(), name='token-obtain'),
     path('token-refresh/', TokenRefreshView.as_view(), name='token-refresh'),
-    path('password-reset/', PasswordResetView.as_view(),
-         name='password-reset'),
-    path('password-reset-confirm/', PasswordResetConfirmView.as_view(),
-         name='password-reset-confirm'),
+    path('reset-password/', PasswordResetView.as_view(),
+         name='reset-password'),
+    path('reset-password-confirm/', PasswordResetConfirmView.as_view(),
+         name='reset-password-confirm'),
 ]

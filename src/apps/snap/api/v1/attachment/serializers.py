@@ -45,10 +45,7 @@ class CreateAttachmentSerializer(BaseAttachmentSerializer):
         many=True,
         required=False,
         slug_field='guid',
-        queryset=Location.objects.filter(
-            content_type__isnull=False,
-            object_id__isnull=False
-        )
+        queryset=Location.objects.all()
     )
 
     class Meta(BaseAttachmentSerializer.Meta):

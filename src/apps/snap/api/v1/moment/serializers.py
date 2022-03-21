@@ -1,6 +1,9 @@
+import re
+
 from django.apps import apps
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 
 from rest_framework import serializers
 from taggit.serializers import (
@@ -23,6 +26,20 @@ class BaseMomentSerializer(TaggitSerializer, serializers.ModelSerializer):
         model = Moment
         fields = '__all__'
 
+    def validate_locations(self, value):
+        if not bool(value):
+            raise serializers.ValidationError(
+                detail=_("Location required")
+            )
+        return value
+
+    def validate_attachments(self, value):
+        if not bool(value):
+            raise serializers.ValidationError(
+                detail=_("Attachment (photo) required")
+            )
+        return value
+
 
 class ListMomentSerializer(BaseMomentSerializer):
     _links = serializers.SerializerMethodField()
@@ -32,15 +49,17 @@ class ListMomentSerializer(BaseMomentSerializer):
     locations = ListLocationSerializer(many=True)
     attachments = ListAttachmentSerializer(
         many=True,
-        fields=['name', 'file', ]
+        fields=['file', 'guid', ]
     )
-    distance = serializers.FloatField(default=0)
-    total_comment = serializers.IntegerField(default=0)
+    distance = serializers.FloatField(default=None)
+    user_distance = serializers.FloatField(default=None)
+    comment_count = serializers.IntegerField(default=0)
     is_owner = serializers.BooleanField(default=False)
 
     class Meta(BaseMomentSerializer.Meta):
         fields = [
             '_links',
+            'id',
             'guid',
             'user',
             'title',
@@ -51,7 +70,8 @@ class ListMomentSerializer(BaseMomentSerializer):
             'tags',
             'withs',
             'distance',
-            'total_comment',
+            'user_distance',
+            'comment_count',
             'is_owner',
         ]
 
@@ -64,6 +84,22 @@ class ListMomentSerializer(BaseMomentSerializer):
         absolute_uri = request.build_absolute_uri(reverse_uri)
         return absolute_uri
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        summary = data.get('summary')
+        if summary:
+            # replace '#hashtag' with '<span>#hashtag</span>'
+            regex = r"#[a-zA-Z0-9]*"
+            result = re.sub(
+                regex,
+                lambda m: '<span class="text-danger">{}</span>'.format(
+                    m.group(0)),
+                summary
+            )
+
+            data.update({'summary': result})
+        return data
+
 
 class RetrieveMomentSerializer(ListMomentSerializer):
     _links = serializers.ReadOnlyField()
@@ -74,7 +110,20 @@ class RetrieveMomentSerializer(ListMomentSerializer):
     def to_representation(self, instance):
         request = self.context.get('request')
         data = super().to_representation(instance)
-        data.update({'is_owner': instance.user.id == request.user.id})
+
+        # only for POST and PATCH
+        if 'GET' not in request.method:
+            attachments = instance.attachments.order_by('-create_at')
+            data.update({
+                'is_owner': instance.user.id == request.user.id,
+                'attachments': ListAttachmentSerializer(
+                    attachments,
+                    many=True,
+                    fields=['file', 'guid', ],
+                    context=self.context
+                ).data
+            })
+
         return data
 
 
@@ -83,19 +132,12 @@ class CreateMomentSerializer(BaseMomentSerializer):
     locations = serializers.SlugRelatedField(
         many=True,
         slug_field='guid',
-        queryset=Location.objects.filter(
-            content_type__isnull=True,
-            object_id__isnull=True
-        )
+        queryset=Location.objects.all()
     )
     attachments = serializers.SlugRelatedField(
         many=True,
-        required=False,
         slug_field='guid',
-        queryset=Attachment.objects.filter(
-            content_type__isnull=True,
-            object_id__isnull=True
-        )
+        queryset=Attachment.objects.all()
     )
     withs = serializers.SlugRelatedField(
         many=True,

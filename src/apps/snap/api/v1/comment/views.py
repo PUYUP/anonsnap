@@ -8,6 +8,7 @@ from django.core.exceptions import (
     ValidationError as DjangoValidationError,
     ObjectDoesNotExist
 )
+from django.db.models import Value, Case, When
 
 from rest_framework import viewsets, status as response_status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -45,7 +46,9 @@ class CommentViewSet(viewsets.ViewSet, ThrottleViewSet):
     -------
 
         {
-            "content_type": "<string>"
+            "content_type": "<string>",
+            "object_id": "<uuid 4>",
+            "byme": "<number 0 or 1>"
         }
 
     """
@@ -78,9 +81,17 @@ class CommentViewSet(viewsets.ViewSet, ThrottleViewSet):
         return super().initialize_request(request, *args, **kwargs)
 
     def queryset(self):
+        user = self.request.user
+
         return Comment.objects \
-            .prefetch_related('user', 'child', 'child__parent') \
-            .select_related('user', 'content_type', 'child')
+            .prefetch_related('user', 'child', 'child__parent', 'content_object') \
+            .select_related('user', 'content_type', 'child') \
+            .annotate(
+                is_owner=Case(
+                    When(user_id=user.id, then=Value(True)),
+                    default=Value(False)
+                )
+            )
 
     def get_instance(self, guid, is_update=False):
         try:
@@ -91,11 +102,17 @@ class CommentViewSet(viewsets.ViewSet, ThrottleViewSet):
             raise NotFound(detail=_("Moment not found"))
 
     def list(self, request):
-        ct = request.query_params.get('content_type')
-        queryset = self.queryset().filter(
-            content_type__model=ct,
-            content_type__app_label=Comment._meta.app_label
-        )
+        if request.query_params.get('byme', '0') == '1':
+            queryset = self.queryset().filter(user_id=request.user.id)
+        else:
+            ct = request.query_params.get('content_type')
+            object_id = request.query_params.get('object_id')
+
+            queryset = self.queryset().filter(
+                content_type__model=ct,
+                content_type__app_label=Comment._meta.app_label,
+                moment__guid=object_id
+            )
 
         paginate_queryset = PAGINATOR.paginate_queryset(queryset, request)
         serializer = ListCommentSerializer(

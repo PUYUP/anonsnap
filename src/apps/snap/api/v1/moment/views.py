@@ -10,7 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from django.apps import apps
 from django.db.models.functions import ACos, Cos, Sin, Radians
 from django.db.models.expressions import OuterRef, Subquery
-from django.db.models import F, Value, FloatField, Count, Case, When
+from django.db.models import F, Value, FloatField, Count, Case, When, Prefetch, Q
 
 from rest_framework import viewsets, status as response_status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -32,6 +32,7 @@ PAGINATOR = LimitOffsetPagination()
 Location = apps.get_registered_model('snap', 'Location')
 Moment = apps.get_registered_model('snap', 'Moment')
 Comment = apps.get_registered_model('snap', 'Comment')
+Attachment = apps.get_registered_model('snap', 'Attachment')
 
 
 class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
@@ -51,7 +52,13 @@ class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
     -------
 
         {
-            "radius": "in km <integer>"
+            "latitude": "<float>",
+            "longitude": "<float>",
+            "user_latitude": "<float>",
+            "user_longitude": "<float>",
+            "radius": "<number>",
+            "tag": "<string>",
+            "byme": "<number 0 or 1>"
         }
 
     """
@@ -80,13 +87,20 @@ class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
             return [permission() for permission in self.permission_classes]
 
     def _querying_distance(self, queryset):
-        max_radius = 5000000
+        """Get moment by coordinate in map
+        and calculate distance from user real location"""
+
+        # taken from map
         latitude = self.request.query_params.get('latitude')
         longitude = self.request.query_params.get('longitude')
+        radius = self.request.query_params.get('radius', 5)  # in kilometer
+
+        # actual user coordinate
+        user_latitude = self.request.query_params.get('user_latitude')
+        user_longitude = self.request.query_params.get('user_longitude')
 
         if latitude and longitude:
-            # calculate distance based on current user location
-            # by their latitude and longitude
+            # moment by location selected in map
             # in kilometer use: 6371, in miles use: 3959
             calculate_distance = Value(6371) * ACos(
                 Cos(Radians(float(latitude), output_field=FloatField()))
@@ -99,16 +113,53 @@ class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
                 * Sin(Radians(F('latitude'), output_field=FloatField())),
                 output_field=FloatField()
             )
-            location = Location.objects.filter(
-                object_id=OuterRef('id'),
-                content_type__model=Moment._meta.model_name
-            ).annotate(distance=calculate_distance)
 
-            queryset = queryset.annotate(
-                distance=Subquery(location.values('distance')[:1])
-            ).filter(distance__lte=max_radius).order_by('distance')
+            location = Location.objects \
+                .filter(
+                    object_id=OuterRef('id'),
+                    content_type__model=Moment._meta.model_name
+                ).annotate(distance=calculate_distance)
+
+            # calculate user distance from moment
+            if user_latitude and user_longitude:
+                calculate_user_distance = Value(6371) * ACos(
+                    Cos(Radians(float(user_latitude), output_field=FloatField()))
+                    * Cos(Radians(F('latitude'), output_field=FloatField()))
+                    * Cos(
+                        Radians(F('longitude'), output_field=FloatField())
+                        - Radians(float(user_longitude), output_field=FloatField())
+                    )
+                    + Sin(Radians(float(user_latitude), output_field=FloatField()))
+                    * Sin(Radians(F('latitude'), output_field=FloatField())),
+                    output_field=FloatField()
+                )
+
+                location = location.annotate(user_distance=calculate_user_distance)
+                queryset = queryset.annotate(user_distance=Subquery(location.values('user_distance')[:1]))
+
+            queryset = queryset.annotate(distance=Subquery(location.values('distance')[:1]))
+
+            # not by me!
+            if self.request.query_params.get('byme', '0') != '1':
+                queryset = queryset.filter(Q(distance__isnull=False) & Q(distance__lte=radius))
+                return queryset.order_by('distance')
 
         return queryset.order_by('-create_at')
+
+    def _querying_date(self, queryset):
+        fromdate = self.request.query_params.get('fromdate')
+        todate = self.request.query_params.get('todate')
+        somedate = fromdate or todate  # return None if two date None
+
+        if fromdate and todate:
+            queryset = queryset.filter(
+                create_at__gte=fromdate,
+                create_at__lte=todate)
+
+        elif somedate:
+            queryset = queryset.filter(create_at__date=somedate)
+
+        return queryset
 
     def _querying_tag(self, queryset):
         # can separate with comma
@@ -126,13 +177,25 @@ class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
     def queryset(self):
         user = self.request.user
         return Moment.objects \
-            .prefetch_related('user', 'attachments', 'attachments__locations',
-                              'locations', 'tags', 'withs') \
+            .prefetch_related(
+                'user',
+                Prefetch(
+                    'attachments',
+                    queryset=Attachment.objects.order_by('-create_at')
+                ),
+                'attachments__locations',
+                'locations',
+                'tags',
+                'withs'
+            ) \
             .select_related('user') \
             .annotate(
-                total_comment=Count('comments'),
+                comment_count=Count('comments'),
                 is_owner=Case(
-                    When(user_id=user.id, then=Value(True)),
+                    When(
+                        Q(user__isnull=False) & Q(user_id=user.id),
+                        then=Value(True)
+                    ),
                     default=Value(False)
                 )
             )
@@ -148,6 +211,11 @@ class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
     def list(self, request):
         queryset = self._querying_distance(self.queryset())
         queryset = self._querying_tag(queryset)
+        queryset = self._querying_date(queryset)
+
+        if request.query_params.get('byme', '0') == '1':
+            queryset = queryset.filter(user_id=request.user.id)
+
         paginate_queryset = PAGINATOR.paginate_queryset(queryset, request)
         serializer = ListMomentSerializer(
             paginate_queryset,

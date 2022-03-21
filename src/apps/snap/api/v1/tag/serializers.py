@@ -9,10 +9,11 @@ class BaseTagSerializer(serializers.ModelSerializer):
     name = serializers.StringRelatedField()
     count = serializers.IntegerField(default=0)
     distance = serializers.FloatField(default=0)
+    user_distance = serializers.FloatField(default=0)
 
     class Meta:
         model = Tag
-        fields = ['name', 'count', 'distance', ]
+        fields = ['id', 'name', 'count', 'distance', 'user_distance', ]
 
 
 class ListTagSerializer(BaseTagSerializer):

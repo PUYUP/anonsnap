@@ -16,11 +16,11 @@ class RootAPIView(APIView):
                                 format=format, current_app='user'),
                 'token': reverse('user_api:token-obtain', request=request,
                                  format=format, current_app='user'),
-                'password-reset': reverse('user_api:password-reset',
+                'reset-password': reverse('user_api:reset-password',
                                           request=request,
                                           format=format, current_app='user'),
-                'password-reset-confirm': reverse(
-                    'user_api:password-reset-confirm',
+                'reset-password-confirm': reverse(
+                    'user_api:reset-password-confirm',
                     request=request,
                     format=format,
                     current_app='user'

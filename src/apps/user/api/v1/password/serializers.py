@@ -8,6 +8,7 @@ from django.utils.http import urlsafe_base64_encode
 from django.apps import apps
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils.http import urlsafe_base64_decode
+from django.core.validators import validate_email
 
 from rest_framework import serializers
 from rest_framework.exceptions import NotFound
@@ -66,6 +67,24 @@ class PasswordResetSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 detail=_("%s not acceptable." % value)
             )
+        return value
+
+    def _validate_email(self, email):
+        try:
+            validate_email(email)
+        except serializers.ValidationError as e:
+            raise serializers.ValidationError(
+                detail=smart_str(e)
+            )
+
+    def _validate_msisdn(self, msisdn):
+        pass
+
+    def validate_value(self, value):
+        resetwith = self.initial_data.get('resetwith')
+        validator = getattr(self, '_validate_{}'.format(resetwith))
+        validator(value)
+
         return value
 
     def get_users(self, resetwith, value):

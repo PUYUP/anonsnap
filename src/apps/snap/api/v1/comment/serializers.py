@@ -23,16 +23,21 @@ class ListCommentSerializer(BaseCommentSerializer):
         read_only=True,
         source='child.parent.id'
     )
+    object_guid = serializers.UUIDField(source='content_object.guid')
+    is_owner = serializers.BooleanField(default=False)
 
     class Meta(BaseCommentSerializer.Meta):
         fields = [
             '_links',
             'guid',
+            'object_guid',
+            'create_at',
             'parent',
             'user',
             'comment_content',
+            'is_owner',
         ]
-
+    
     def get__links(self, instance):
         request = self.context.get('request')
         reverse_uri = reverse_lazy(
@@ -48,6 +53,18 @@ class RetrieveCommentSerializer(ListCommentSerializer):
 
     class Meta(ListCommentSerializer.Meta):
         pass
+
+    def to_representation(self, instance):
+        request = self.context.get('request')
+        data = super().to_representation(instance)
+
+        # only for POST and PATCH
+        if 'GET' not in request.method:
+            data.update({
+                'is_owner': instance.user.id == request.user.id,
+            })
+
+        return data
 
 
 class CreateCommentSerializer(BaseCommentSerializer):

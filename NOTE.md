@@ -28,6 +28,7 @@ selesai
 
 selanjutnya
 1	attachment comment
+2	urutan foto salah setelah edit dengan menambah foto
 
 flow
 1	harus mengaktifkan lokasi (gps) ponsel / browser
