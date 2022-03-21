@@ -9,7 +9,6 @@ class ThrottleViewSet(object):
     def get_throttles(self):
         super().get_throttles()
 
-        print(self.action)
         if self.action in ['create', 'partial_update', 'destroy']:
             throttle_classes = (AnonRateThrottle, UserRateThrottle, )
         else:
