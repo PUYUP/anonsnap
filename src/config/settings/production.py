@@ -1,7 +1,6 @@
 from .project import *
 
 ALLOWED_HOSTS = ['117.53.45.69', 'be.anonsnap.com']
-WSGI_APPLICATION = 'src.config.wsgi.application'
 
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 DATABASES = {
