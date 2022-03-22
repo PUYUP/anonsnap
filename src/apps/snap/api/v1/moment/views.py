@@ -117,8 +117,9 @@ class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
             location = Location.objects \
                 .filter(
                     object_id=OuterRef('id'),
-                    content_type__model=Moment._meta.model_name
-                ).annotate(distance=calculate_distance)
+                    content_type__model=Moment._meta.model_name) \
+                .annotate(distance=calculate_distance) \
+                .filter(Q(distance__isnull=False) & Q(distance__lte=radius))
 
             # calculate user distance from moment
             if user_latitude and user_longitude:
@@ -141,7 +142,6 @@ class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
 
             # not by me!
             if self.request.query_params.get('byme', '0') != '1':
-                queryset = queryset.filter(Q(distance__isnull=False) & Q(distance__lte=radius))
                 return queryset.order_by('distance')
 
         return queryset.order_by('-create_at')
