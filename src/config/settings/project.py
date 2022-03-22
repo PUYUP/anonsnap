@@ -1,7 +1,7 @@
 from datetime import timedelta
 from .base import *
 
-PROJECT_ALLOWED_HOSTS = ['*', '192.168.1.138', '117.53.45.69']
+PROJECT_ALLOWED_HOSTS = ['*', '192.168.1.138']
 ALLOWED_HOSTS = ALLOWED_HOSTS + PROJECT_ALLOWED_HOSTS
 
 HOST = '127.0.0.1'
