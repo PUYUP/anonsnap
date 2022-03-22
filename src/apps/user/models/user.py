@@ -263,7 +263,7 @@ class AbstractProfile(AbstractCommonField):
     birthdate = models.DateField(blank=True, null=True)
     about = models.TextField(blank=True, null=True)
     picture = models.ImageField(
-        upload_to='images/user',
+        upload_to='profile',
         max_length=500,
         null=True,
         blank=True

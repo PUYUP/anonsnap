@@ -16,3 +16,5 @@ Pillow>=9.0.0
 wheel>=0.37.1
 markdown>=3.3.6
 redis>=4.1.1
+PyMySQL>=1.0.2
+backports.zoneinfo>=0.2.1
