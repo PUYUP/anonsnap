@@ -2,7 +2,7 @@ import pymysql
 from .project import *
 
 ALLOWED_HOSTS = ['117.53.45.69', 'be.anonsnap.com']
-DEBUG = False
+DEBUG = True
 
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 DATABASES = {
