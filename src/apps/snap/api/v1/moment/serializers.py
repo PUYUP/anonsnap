@@ -97,7 +97,7 @@ class ListMomentSerializer(BaseMomentSerializer):
                 summary
             )
 
-            data.update({'summary': result})
+            data.update({'summary_html': result})
         return data
 
 
