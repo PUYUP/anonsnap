@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.conf import settings
 from . import tasks
 
 
@@ -15,9 +16,13 @@ def verification_handler(sender, instance, created, **kwargs):
     if created and instance.sendmime == sendmime.TEXT:
         # send on created only
         if instance.sendwith == sendwith.MSISDN:
-            # tasks.sendwith_sms.delay(data)
-            pass
+            if settings.DEBUG:
+                tasks.sendwith_sms(data)
+            else:
+                tasks.sendwith_sms.delay(data)
 
         elif instance.sendwith == sendwith.EMAIL:
-            # tasks.sendwith_email.delay(data)
-            pass
+            if settings.DEBUG:
+                tasks.sendwith_email(data)
+            else:
+                tasks.sendwith_email.delay(data)
