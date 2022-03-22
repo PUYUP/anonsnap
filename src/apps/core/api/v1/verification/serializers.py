@@ -86,12 +86,15 @@ class ValidateVerificationSerializer(BaseVerificationSerializer):
         }
 
     def to_representation(self, instance):
+        data = {'passcode': instance.passcode}
+
         serializer = RetrieveVerificationSerializer(
             instance,
             context=self.context
         )
 
-        return serializer.data
+        data.update(serializer.data)
+        return data
 
     def validate(self, attrs):
         request = self.context.get('request')
