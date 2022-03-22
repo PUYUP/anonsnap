@@ -31,3 +31,52 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Django Sessions
+# ------------------------------------------------------------------------------
+# https://docs.djangoproject.com/en/2.2/ref/settings/
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = False
+
+SECURE_REFERRER_POLICY = 'same-origin'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_SSL_REDIRECT = True
+SECURE_HSTS_SECONDS = 5
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+X_FRAME_OPTIONS = 'DENY'
+
+# Django csrf
+# ------------------------------------------------------------------------------
+# https://docs.djangoproject.com/en/2.2/ref/csrf/
+CSRF_COOKIE_DOMAIN = '.anonsnap.com'
+CSRF_HEADER_NAME = 'HTTP_X_CSRFTOKEN'
+CSRF_COOKIE_SECURE = True
+CSRF_USE_SESSIONS = False
+CSRF_COOKIE_HTTPONLY = False
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.anonsnap.com',
+]
+
+# Django CORS
+# ------------------------------------------------------------------------------
+# https://pypi.org/project/django-cors-headers/
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost',
+    'http://localhost:8100',
+]
+
+# CACHING SERVER
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': REDIS_URL,
+        'KEY_PREFIX': 'anonsnap',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient'
+        },
+    }
+}
