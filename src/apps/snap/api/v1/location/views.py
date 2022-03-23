@@ -10,7 +10,7 @@ from .serializers import CreateLocationSerializer
 from ..utils import ThrottleViewSet
 
 
-class LocationViewSet(viewsets.ViewSet, ThrottleViewSet):
+class LocationViewSet(ThrottleViewSet, viewsets.ViewSet):
     """
     POST
     ------

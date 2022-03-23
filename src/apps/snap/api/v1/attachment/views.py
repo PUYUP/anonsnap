@@ -11,7 +11,7 @@ from .serializers import CreateAttachmentSerializer
 from ..utils import ThrottleViewSet
 
 
-class AttachmentViewSet(viewsets.ViewSet, ThrottleViewSet):
+class AttachmentViewSet(ThrottleViewSet, viewsets.ViewSet):
     """
     POST
     ------

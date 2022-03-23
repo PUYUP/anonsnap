@@ -29,7 +29,7 @@ PAGINATOR = LimitOffsetPagination()
 Comment = apps.get_registered_model('snap', 'Comment')
 
 
-class CommentViewSet(viewsets.ViewSet, ThrottleViewSet):
+class CommentViewSet(ThrottleViewSet, viewsets.ViewSet):
     """
     POST
     -------
