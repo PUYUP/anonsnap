@@ -35,7 +35,7 @@ Comment = apps.get_registered_model('snap', 'Comment')
 Attachment = apps.get_registered_model('snap', 'Attachment')
 
 
-class MomentViewSet(viewsets.ViewSet, ThrottleViewSet):
+class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
     """
     POST
     -------
