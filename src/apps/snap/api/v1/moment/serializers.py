@@ -121,7 +121,11 @@ class RetrieveMomentSerializer(ListMomentSerializer):
                     many=True,
                     fields=['file', 'guid', ],
                     context=self.context
-                ).data
+                ).data,
+
+                # of course distance from location creator is zero
+                'user_distance': 0,
+                'distance': 0,
             })
 
         return data
