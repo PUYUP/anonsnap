@@ -229,6 +229,7 @@ class AbstractReaction(AbstractCommonField):
 
     class Meta:
         abstract = True
+        managed = False
 
     def __str__(self):
         return self.get_identifier_display()
