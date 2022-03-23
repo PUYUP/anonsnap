@@ -1,4 +1,4 @@
-import pymysql
+# import pymysql
 from .project import *
 
 ALLOWED_HOSTS = ['117.53.45.69', 'be.anonsnap.com']
@@ -21,8 +21,8 @@ DATABASES = {
 
 # Fake PyMySQL's version and install as MySQLdb
 # https://adamj.eu/tech/2020/02/04/how-to-use-pymysql-with-django/
-pymysql.version_info = (1, 4, 2, "final", 0)
-pymysql.install_as_MySQLdb()
+# pymysql.version_info = (1, 4, 2, "final", 0)
+# pymysql.install_as_MySQLdb()
 
 # Static files (CSS, JavaScript, Images)
 # ------------------------------------------------------------------------------
