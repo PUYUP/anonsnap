@@ -9,8 +9,9 @@ from django.utils.encoding import smart_str
 from django.utils.translation import gettext_lazy as _
 from django.apps import apps
 from django.db.models.functions import ACos, Cos, Sin, Radians
-from django.db.models.expressions import OuterRef, Subquery
+from django.db.models.expressions import OuterRef, Subquery, Exists
 from django.db.models import F, Value, FloatField, Count, Case, When, Prefetch, Q
+from django.contrib.contenttypes.models import ContentType
 
 from rest_framework import viewsets, status as response_status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -25,13 +26,14 @@ from .serializers import (
     RetrieveMomentSerializer
 )
 from ..utils import ThrottleViewSet
-from ..permissions import IsMomentOwnerOrReject
+from ..permissions import IsOwnerOrReject
 
 PAGINATOR = LimitOffsetPagination()
 
 Location = apps.get_registered_model('snap', 'Location')
 Moment = apps.get_registered_model('snap', 'Moment')
 Comment = apps.get_registered_model('snap', 'Comment')
+Reaction = apps.get_registered_model('snap', 'Reaction')
 Attachment = apps.get_registered_model('snap', 'Attachment')
 
 
@@ -66,8 +68,8 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
     permission_classes = (AllowAny,)
     permission_action = {
         'create': (IsAuthenticated,),
-        'partial_update': (IsMomentOwnerOrReject,),
-        'destroy': (IsMomentOwnerOrReject,),
+        'partial_update': (IsOwnerOrReject,),
+        'destroy': (IsOwnerOrReject,),
     }
 
     def __init__(self, **kwargs) -> None:
@@ -177,6 +179,14 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
 
     def queryset(self):
         user = self.request.user
+        content_type = ContentType.objects.get_for_model(Moment._meta.model)
+        reaction = Reaction.objects \
+            .filter(
+                object_id=OuterRef('id'),
+                content_type=content_type.id,
+                user_id=user.id
+            )
+
         return Moment.objects \
             .prefetch_related(
                 'user',
@@ -186,12 +196,18 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
                 ),
                 'attachments__locations',
                 'locations',
+                Prefetch(
+                    'reactions',
+                    queryset=Reaction.objects.filter(user_id=user.id)
+                ),
+                'reactions__content_object',
                 'tags',
                 'withs'
             ) \
             .select_related('user') \
             .annotate(
-                comment_count=Count('comments'),
+                comment_count=Count('comments', distinct=True),
+                reaction_count=Count('reactions', distinct=True),
                 is_owner=Case(
                     When(
                         Q(user__isnull=False) & Q(user_id=user.id),

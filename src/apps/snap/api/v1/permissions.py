@@ -1,10 +1,7 @@
-import json
-
-from django.db.models import Q
 from rest_framework import permissions
 
 
-class IsMomentOwnerOrReject(permissions.BasePermission):
+class IsOwnerOrReject(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True

@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.pagination import LimitOffsetPagination
 
-from ..permissions import IsMomentOwnerOrReject
+from ..permissions import IsOwnerOrReject
 from ..utils import ThrottleViewSet
 from .serializers import (
     CreateCommentSerializer,
@@ -56,8 +56,8 @@ class CommentViewSet(ThrottleViewSet, viewsets.ViewSet):
     permission_classes = (AllowAny, )
     permission_action = {
         'create': (IsAuthenticated,),
-        'partial_update': (IsMomentOwnerOrReject,),
-        'destroy': (IsMomentOwnerOrReject,),
+        'partial_update': (IsOwnerOrReject,),
+        'destroy': (IsOwnerOrReject,),
     }
 
     def __init__(self, **kwargs) -> None:

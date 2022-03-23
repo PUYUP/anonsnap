@@ -32,6 +32,7 @@ class AbstractMoment(SetMomentTags, AbstractCommonField):
         related_query_name='moment'
     )
     comments = GenericRelation('snap.Comment', related_query_name='moment')
+    reactions = GenericRelation('snap.Reaction', related_query_name='moment')
     tags = TaggableManager(
         verbose_name=_("Tags"),
         related_name='moment',
@@ -41,7 +42,7 @@ class AbstractMoment(SetMomentTags, AbstractCommonField):
     withs = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         through='snap.With',
-        related_name='moment_withs'
+        related_name='moment'
     )
 
     class Meta:

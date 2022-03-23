@@ -65,3 +65,13 @@ if not is_model_registered('snap', 'With'):
             pass
 
     __all__.append('With')
+
+
+if not is_model_registered('snap', 'Reaction'):
+    class Reaction(AbstractReaction):
+        history = HistoricalRecords(inherit=True)
+
+        class Meta(AbstractReaction.Meta):
+            pass
+
+    __all__.append('Reaction')

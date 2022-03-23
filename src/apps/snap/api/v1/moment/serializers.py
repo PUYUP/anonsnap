@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 
 from rest_framework import serializers
+from apps.snap.api.v1.reaction.serializers import RetrieveReactionSerializer
 from taggit.serializers import (
     TagListSerializerField,
     TaggitSerializer
@@ -54,6 +55,8 @@ class ListMomentSerializer(BaseMomentSerializer):
     distance = serializers.FloatField(default=None)
     user_distance = serializers.FloatField(default=None)
     comment_count = serializers.IntegerField(default=0)
+    reactions = RetrieveReactionSerializer(many=True)
+    reaction_count = serializers.IntegerField(default=0)
     is_owner = serializers.BooleanField(default=False)
 
     class Meta(BaseMomentSerializer.Meta):
@@ -72,6 +75,8 @@ class ListMomentSerializer(BaseMomentSerializer):
             'distance',
             'user_distance',
             'comment_count',
+            'reaction_count',
+            'reactions',
             'is_owner',
         ]
 

@@ -8,6 +8,7 @@ from django.contrib.contenttypes.fields import (
 )
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import gettext_lazy as _
+from django.core.validators import RegexValidator
 
 from taggit.managers import TaggableManager
 
@@ -117,6 +118,10 @@ class AbstractAttachment(SetAttachmentTags, AbstractCommonField):
         'snap.Comment',
         related_query_name='attachment'
     )
+    reactions = GenericRelation(
+        'snap.Reaction',
+        related_query_name='attachment'
+    )
     tags = TaggableManager(
         verbose_name=_("Tags"),
         related_name='attachment',
@@ -156,6 +161,7 @@ class AbstractComment(AbstractCommonField):
     )
     object_id = models.CharField(max_length=255)
     content_object = GenericForeignKey('content_type', 'object_id')
+    reactions = GenericRelation('snap.Reaction', related_query_name='comment')
     comment_content = models.TextField()
 
     class Meta:
@@ -188,3 +194,41 @@ class AbstractCommentTree(AbstractCommonField):
     def __str__(self) -> str:
         return 'parent: {parent} - child: {child}' \
             .format(parent=self.parent.id, child=self.child.id)
+
+
+class AbstractReaction(AbstractCommonField):
+    class Identifier(models.TextChoices):
+        LIKE = 'like', _("Like")
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='reactions',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        related_name='reactions',
+        limit_choices_to=models.Q(app_label='snap')
+    )
+    object_id = models.CharField(max_length=255)
+    content_object = GenericForeignKey('content_type', 'object_id')
+    identifier = models.CharField(
+        max_length=15,
+        choices=Identifier.choices,
+        validators=[
+            RegexValidator(
+                regex='^[a-zA-Z_]*$',
+                message=_("Can only contain the letters a-z and underscores."),
+                code='invalid_identifier'
+            ),
+        ]
+    )
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        return self.get_identifier_display()

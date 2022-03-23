@@ -47,5 +47,8 @@ class RootAPIView(APIView):
                 'comment': reverse('snap_api:comment-list',
                                    request=request, format=format,
                                    current_app='snap'),
+                'reaction': reverse('snap_api:reaction-list',
+                                    request=request, format=format,
+                                    current_app='snap'),
             },
         })
