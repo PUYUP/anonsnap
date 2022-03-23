@@ -159,7 +159,6 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
 
         elif somedate:
             queryset = queryset.filter(create_at__date=somedate)
-            print('TT')
 
         return queryset
 
