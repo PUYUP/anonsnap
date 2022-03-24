@@ -146,7 +146,7 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
                 queryset = queryset.filter(
                     Q(distance__isnull=False) & Q(distance__lte=radius))
 
-                return queryset.order_by('distance')
+                return queryset.order_by('user_distance')
         return queryset.order_by('-create_at')
 
     def _querying_date(self, queryset):
