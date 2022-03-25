@@ -50,7 +50,7 @@ class AbstractMoment(SetMomentTags, AbstractCommonField):
         ordering = ['-create_at']
 
     def __str__(self) -> str:
-        return self.title or self.summary
+        return self.title or self.summary or self.id
 
 
 class AbstractWith(AbstractCommonField):
