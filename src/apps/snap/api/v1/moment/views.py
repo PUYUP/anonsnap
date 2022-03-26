@@ -122,6 +122,9 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
                     content_type__model=Moment._meta.model_name) \
                 .annotate(distance=calculate_distance)
 
+            queryset = queryset.annotate(
+                distance=Subquery(location.values('distance')[:1]))
+
             # calculate user distance from moment
             if user_latitude and user_longitude:
                 calculate_user_distance = Value(6371) * ACos(
@@ -129,7 +132,8 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
                     * Cos(Radians(F('latitude'), output_field=FloatField()))
                     * Cos(
                         Radians(F('longitude'), output_field=FloatField())
-                        - Radians(float(user_longitude), output_field=FloatField())
+                        - Radians(float(user_longitude),
+                                  output_field=FloatField())
                     )
                     + Sin(Radians(float(user_latitude), output_field=FloatField()))
                     * Sin(Radians(F('latitude'), output_field=FloatField())),
@@ -137,17 +141,21 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
                 )
 
                 location = location.annotate(user_distance=calculate_user_distance)
-                queryset = queryset.annotate(user_distance=Subquery(location.values('user_distance')[:1]))
+                queryset = queryset \
+                    .annotate(user_distance=Subquery(location.values('user_distance')[:1])) \
+                    .order_by('user_distance')
 
-            queryset = queryset.annotate(distance=Subquery(location.values('distance')[:1]))
+            else:
+                queryset = queryset.order_by('-create_at')
 
             # not by me!
+            # show moment from all users
+            # but make sure moment has location!
             if self.request.query_params.get('byme', '0') != '1':
-                queryset = queryset.filter(
-                    Q(distance__isnull=False) & Q(distance__lte=radius))
+                queryset = queryset \
+                    .filter(Q(distance__isnull=False) & Q(distance__lte=radius))
 
-                return queryset.order_by('user_distance')
-        return queryset.order_by('-create_at')
+        return queryset
 
     def _querying_date(self, queryset):
         fromdate = self.request.query_params.get('fromdate')
