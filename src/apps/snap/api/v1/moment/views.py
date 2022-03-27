@@ -140,13 +140,11 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
                     output_field=FloatField()
                 )
 
-                location = location.annotate(user_distance=calculate_user_distance)
+                location = location.annotate(
+                    user_distance=calculate_user_distance)
                 queryset = queryset \
                     .annotate(user_distance=Subquery(location.values('user_distance')[:1])) \
                     .order_by('user_distance')
-
-            else:
-                queryset = queryset.order_by('create_at')
 
             # not by me!
             # show moment from all users
@@ -154,6 +152,8 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
             if self.request.query_params.get('byme', '0') != '1':
                 queryset = queryset \
                     .filter(Q(distance__isnull=False) & Q(distance__lte=radius))
+        else:
+            queryset = queryset.order_by('-create_at')
 
         return queryset
 
