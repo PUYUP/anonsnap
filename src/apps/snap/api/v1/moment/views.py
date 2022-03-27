@@ -146,7 +146,7 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
                     .order_by('user_distance')
 
             else:
-                queryset = queryset.order_by('-create_at')
+                queryset = queryset.order_by('create_at')
 
             # not by me!
             # show moment from all users
