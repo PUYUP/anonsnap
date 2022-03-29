@@ -38,6 +38,11 @@ class WithInline(admin.StackedInline):
 class MomentAdmin(admin.ModelAdmin):
     model = Moment
     inlines = (LocationInline, AttachmentInline, WithInline, )
+    list_display = ('label', 'user',)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.prefetch_related('user').select_related('user')
 
 
 class AttachmentAdmin(admin.ModelAdmin):
