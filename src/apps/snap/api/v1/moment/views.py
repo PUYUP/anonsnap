@@ -9,15 +9,15 @@ from django.utils.encoding import smart_str
 from django.utils.translation import gettext_lazy as _
 from django.apps import apps
 from django.db.models.functions import ACos, Cos, Sin, Radians
-from django.db.models.expressions import OuterRef, Subquery, Exists
+from django.db.models.expressions import OuterRef, Subquery
 from django.db.models import F, Value, FloatField, Count, Case, When, Prefetch, Q
-from django.contrib.contenttypes.models import ContentType
 
 from rest_framework import viewsets, status as response_status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.response import Response
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.decorators import action
 
 from .serializers import (
     CreateMomentSerializer,
@@ -59,8 +59,7 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
             "user_latitude": "<float>",
             "user_longitude": "<float>",
             "radius": "<number>",
-            "tag": "<string>",
-            "byme": "<number 0 or 1>"
+            "tag": "<string>"
         }
 
     """
@@ -122,8 +121,9 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
                     content_type__model=Moment._meta.model_name) \
                 .annotate(distance=calculate_distance)
 
-            queryset = queryset.annotate(
-                distance=Subquery(location.values('distance')[:1]))
+            queryset = queryset \
+                .annotate(distance=Subquery(location.values('distance')[:1])) \
+                .filter(Q(distance__isnull=False) & Q(distance__lte=radius))
 
             # calculate user distance from moment
             if user_latitude and user_longitude:
@@ -145,13 +145,6 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
                 queryset = queryset \
                     .annotate(user_distance=Subquery(location.values('user_distance')[:1])) \
                     .order_by('user_distance')
-
-            # not by me!
-            # show moment from all users
-            # but make sure moment has location!
-            if self.request.query_params.get('byme', '0') != '1':
-                queryset = queryset \
-                    .filter(Q(distance__isnull=False) & Q(distance__lte=radius))
         else:
             queryset = queryset.order_by('-create_at')
 
@@ -187,13 +180,6 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
 
     def queryset(self):
         user = self.request.user
-        content_type = ContentType.objects.get_for_model(Moment._meta.model)
-        reaction = Reaction.objects \
-            .filter(
-                object_id=OuterRef('id'),
-                content_type=content_type.id,
-                user_id=user.id
-            )
 
         return Moment.objects \
             .prefetch_related(
@@ -237,9 +223,6 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
         queryset = self._querying_distance(self.queryset())
         queryset = self._querying_tag(queryset)
         queryset = self._querying_date(queryset)
-
-        if request.query_params.get('byme', '0') == '1':
-            queryset = queryset.filter(user_id=request.user.id)
 
         paginate_queryset = PAGINATOR.paginate_queryset(queryset, request)
         serializer = ListMomentSerializer(
@@ -328,3 +311,23 @@ class MomentViewSet(ThrottleViewSet, viewsets.ViewSet):
             serializer.data,
             status=response_status.HTTP_202_ACCEPTED
         )
+
+    @action(
+        detail=False,
+        methods=['GET'],
+        permission_classes=(IsAuthenticated,),
+        url_name='me',
+        url_path='me'
+    )
+    def me(self, request):
+        queryset = self.queryset().filter(user_id=request.user.id)
+        queryset = self._querying_distance(queryset)
+        queryset = queryset.order_by('-create_at')
+
+        paginate_queryset = PAGINATOR.paginate_queryset(queryset, request)
+        serializer = ListMomentSerializer(
+            paginate_queryset,
+            context=self.context,
+            many=True
+        )
+        return PAGINATOR.get_paginated_response(serializer.data)

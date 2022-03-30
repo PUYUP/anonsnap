@@ -15,6 +15,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.decorators import action
 
 from ..permissions import IsOwnerOrReject
 from ..utils import ThrottleViewSet
@@ -47,8 +48,7 @@ class CommentViewSet(ThrottleViewSet, viewsets.ViewSet):
 
         {
             "content_type": "<string>",
-            "object_id": "<uuid 4>",
-            "byme": "<number 0 or 1>"
+            "object_id": "<uuid 4>"
         }
 
     """
@@ -102,17 +102,14 @@ class CommentViewSet(ThrottleViewSet, viewsets.ViewSet):
             raise NotFound(detail=_("Moment not found"))
 
     def list(self, request):
-        if request.query_params.get('byme', '0') == '1':
-            queryset = self.queryset().filter(user_id=request.user.id)
-        else:
-            ct = request.query_params.get('content_type')
-            object_id = request.query_params.get('object_id')
+        ct = request.query_params.get('content_type')
+        object_id = request.query_params.get('object_id')
 
-            queryset = self.queryset().filter(
-                content_type__model=ct,
-                content_type__app_label=Comment._meta.app_label,
-                moment__guid=object_id
-            )
+        queryset = self.queryset().filter(
+            content_type__model=ct,
+            content_type__app_label=Comment._meta.app_label,
+            moment__guid=object_id
+        )
 
         paginate_queryset = PAGINATOR.paginate_queryset(queryset, request)
         serializer = ListCommentSerializer(
@@ -201,3 +198,22 @@ class CommentViewSet(ThrottleViewSet, viewsets.ViewSet):
             serializer.data,
             status=response_status.HTTP_202_ACCEPTED
         )
+
+    @action(
+        detail=False,
+        methods=['GET'],
+        permission_classes=(IsAuthenticated,),
+        url_name='me',
+        url_path='me'
+    )
+    def me(self, request):
+        queryset = self.queryset().filter(user_id=request.user.id) \
+            .order_by('-create_at')
+
+        paginate_queryset = PAGINATOR.paginate_queryset(queryset, request)
+        serializer = ListCommentSerializer(
+            paginate_queryset,
+            context=self.context,
+            many=True
+        )
+        return PAGINATOR.get_paginated_response(serializer.data)
