@@ -22,6 +22,11 @@ def verification_handler(sender, instance, created, **kwargs):
                 tasks.sendwith_sms.delay(data)
 
         elif instance.sendwith == sendwith.EMAIL:
+            # add from email
+            data = data.update(
+                {'from_email': '"AnonSnap!" <noreply@anonsnap.com>'}
+            )
+
             if settings.DEBUG:
                 tasks.sendwith_email(data)
             else:
