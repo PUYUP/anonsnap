@@ -23,7 +23,7 @@ def verification_handler(sender, instance, created, **kwargs):
 
         elif instance.sendwith == sendwith.EMAIL:
             # add from email
-            data = data.update(
+            data.update(
                 {'from_email': '"AnonSnap!" <noreply@anonsnap.com>'}
             )
 
